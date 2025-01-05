@@ -1,7 +1,8 @@
 
 from pprint import pprint
 import requests as r
-from script_config import api_key
+import os
+from dotenv import load_dotenv
 
 def find_nearby_places(api_key, location, place_type, radius=1000):
 
@@ -29,6 +30,8 @@ def find_nearby_places(api_key, location, place_type, radius=1000):
 
 
 if __name__ == "__main__":
+    load_dotenv()
+    api_key = os.getenv('API_KEY')
     place_type = "кафе"
     location = "38.019281,55.631671"  # учитывать порядок так как 2gis долбоебы
     radius = "1000"
