@@ -13,6 +13,9 @@ def make_location_request(message):
         )
     if responce.status_code == 200:
         responce = responce.json()
+        if responce["meta"]["code"] != 200:
+            # Логирование
+            return None
         lat = responce["result"]["items"][0]["point"]["lat"]
         lon = responce["result"]["items"][0]["point"]["lon"]
         return {"lat": lat, "lon": lon}
