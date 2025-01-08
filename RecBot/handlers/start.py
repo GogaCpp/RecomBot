@@ -4,7 +4,7 @@ from telebot import TeleBot
 def register_handlers(bot: TeleBot):
     @bot.message_handler(commands=['start'])
     def send_welcome(message):
-        bot.reply_to(message, "Привет! Я ваш бот по подбору места для отдыха") 
+        chat_id = message.chat.id
+        text = "Привет! Я ваш бот по подбору места для отдыха\nВся справочная информация тут 👉 /help"
+        bot.send_message(chat_id, text)
 
-# TODO help в подсказку старт
-# TODO новый опрос в конууе опроса

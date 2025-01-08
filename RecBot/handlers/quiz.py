@@ -4,6 +4,7 @@ import logging
 from telebot import TeleBot
 from telebot.types import Message, ReplyKeyboardRemove
 
+from keyboards.choise_location_K import get_choice_location_keyboard
 from keyboards.get_location_K import get_location_keyboard
 from scripts.text_to_metrs import convert_to_meters
 from scripts.location import make_location_request
@@ -52,11 +53,12 @@ def survey_handler(message: Message, bot: TeleBot, question_index: int = 0):
 
         text, locations = get_nearby_places(chat_id)
         if text is None:
-            text = "По вышим данным ничего не найденно, давайте еще раз\n/opros"
+            text = "По вышим данным ничего не найденно, давайте еще раз\n/places"
         logging.info(f"result for {chat_id}\n{text}")
         bot.send_message(chat_id, text)
 
-        bot.send_message(chat_id, "Выберите куда пойти, а я помогу добраться")  # TODO клаву с цифрами 
+        question_markup = get_choice_location_keyboard(len(locations))
+        bot.send_message(chat_id, "Выберите куда пойти, а я помогу добраться")
         bot.register_next_step_handler(message, send_location, bot, locations)
         del user_responses[chat_id]
 
@@ -72,6 +74,7 @@ def send_location(message: Message, bot: TeleBot, locations):
         bot.send_location(chat_id, latitude=lat, longitude=lon)
     else:
         bot.send_message(chat_id, "Но я ведь такого не предлагал😳...")
+    bot.send_message(chat_id, "Всегда рад помочь! Удачной прогулки\nЕсли что я всегда тут /places")
 
 
 def get_nearby_places(chat_id: int):
@@ -153,6 +156,6 @@ def save_message(message: Message, question_index: int) -> bool:
 
 
 def register_handlers(bot: TeleBot):
-    @bot.message_handler(commands=['opros'])
-    def handle_opros(message: Message):
+    @bot.message_handler(commands=['places'])
+    def handle_places(message: Message):
         survey_handler(message, bot)

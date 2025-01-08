@@ -1,4 +1,4 @@
-from telebot import TeleBot
+from telebot import TeleBot, types
 
 
 def register_handlers(bot: TeleBot):
@@ -9,12 +9,16 @@ def register_handlers(bot: TeleBot):
         Команды:
         /start - запуск бота
         /help - справочная информация о командей
-        /opros - выбор места отдыха
+        /places - выбор места отдыха
 
 Работу сделали студенты 114 группы:
+        Елизаров Андрей
         Авакян Александр
         Грушецкий Генадий
-        Елизаров Андрей
         """
         text = text.replace("\t", "")
-        bot.send_message(chat_id, text)
+        media = []
+        with open("RecBot/images/we.jpeg", 'rb') as photo:
+            media.append(types.InputMediaPhoto(photo, caption=text))
+            bot.send_media_group(chat_id, media)
+
