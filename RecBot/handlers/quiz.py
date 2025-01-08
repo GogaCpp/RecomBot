@@ -58,7 +58,7 @@ def survey_handler(message: Message, bot: TeleBot, question_index: int = 0):
         bot.send_message(chat_id, text)
 
         question_markup = get_choice_location_keyboard(len(locations))
-        bot.send_message(chat_id, "Выберите куда пойти, а я помогу добраться")
+        bot.send_message(chat_id, "Выберите куда пойти, а я помогу добраться", reply_markup=question_markup)
         bot.register_next_step_handler(message, send_location, bot, locations)
         del user_responses[chat_id]
 
