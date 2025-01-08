@@ -5,7 +5,7 @@ def register_handlers(bot: TeleBot):
     @bot.message_handler(commands=['help'])
     def help_message(message):
         chat_id = message.chat.id
-        text= """
+        text = """
         Команды:
         /start - запуск бота
         /help - справочная информация о командей

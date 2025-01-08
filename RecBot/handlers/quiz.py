@@ -1,9 +1,11 @@
-from telebot import TeleBot
-from telebot.types import Message, ReplyKeyboardRemove
 import os
 from dotenv import load_dotenv
+import logging
+from telebot import TeleBot
+from telebot.types import Message, ReplyKeyboardRemove
 
 from keyboards.get_location_K import get_location_keyboard
+from scripts.text_to_metrs import convert_to_meters
 from scripts.location import make_location_request
 from scripts.scriptlocation import find_nearby_places
 
@@ -19,7 +21,7 @@ user_responses = {}  # хешировать id чтобы не присесть 
 null_markup = ReplyKeyboardRemove()
 
 
-def survey_handler(message: Message, bot: TeleBot, question_index=0):
+def survey_handler(message: Message, bot: TeleBot, question_index: int = 0):
     chat_id = message.chat.id
     question_markup = null_markup
 
@@ -32,25 +34,47 @@ def survey_handler(message: Message, bot: TeleBot, question_index=0):
 
     if question_index < len(questions):
         if question_index != 0:  # сохранение
-            save_message(message, question_index)
+            saved = save_message(message, question_index)
+            if not saved:
+                bot.send_message(chat_id, "Проси, такую строчку я не обработаю, давай еще раз")
+                return None
 
         if list(questions[question_index].keys())[0] == "location":
             question_markup = get_location_keyboard()
         bot.send_message(chat_id, list(questions[question_index].values())[0], reply_markup=question_markup)
         bot.register_next_step_handler(message, survey_handler, bot, question_index + 1)
     else:
-        save_message(message, question_index)
+        saved = save_message(message, question_index)
+        if not saved:
+            bot.send_message(chat_id, "Проси, такую строчку я не обработаю, давай еще раз")
+            return None
         bot.send_message(chat_id, "Ожидайте свою подборочку)")
 
-        text = get_nearby_places(chat_id)
+        text, locations = get_nearby_places(chat_id)
         if text is None:
             text = "По вышим данным ничего не найденно, давайте еще раз\n/opros"
-        print(user_responses)
+        logging.info(f"result for {chat_id}\n{text}")
         bot.send_message(chat_id, text)
+
+        bot.send_message(chat_id, "Выберите куда пойти, а я помогу добраться")  # TODO клаву с цифрами 
+        bot.register_next_step_handler(message, send_location, bot, locations)
         del user_responses[chat_id]
 
 
-def get_nearby_places(chat_id):
+def send_location(message: Message, bot: TeleBot, locations):
+    chat_id = message.chat.id
+    message_text = int(message.text) if message.text.isdigit() else bot.send_message(chat_id, "Это даже не число..")
+    logging.debug(f"Координаты \n {locations}")
+    print(locations)
+    if locations.get(message_text) is not None:
+        lat, lon = locations[message_text]["lat"], locations[message_text]["lon"]
+        print(f"{lat},{lon}")
+        bot.send_location(chat_id, latitude=lat, longitude=lon)
+    else:
+        bot.send_message(chat_id, "Но я ведь такого не предлагал😳...")
+
+
+def get_nearby_places(chat_id: int):
     json_resp = find_nearby_places(
         api_key=os.getenv("API_KEY"),
         lat=user_responses[chat_id]["location"]["lat"],
@@ -59,12 +83,15 @@ def get_nearby_places(chat_id):
         radius=user_responses[chat_id]["radius"]
         )
     if json_resp is None:
+        logging.info(f"Bad request to get nearby places {chat_id}")
         return None
+
     return json_to_text(json_resp)
 
 
-def json_to_text(json_format):
+def json_to_text(json_format) -> str:
     text_format = ""
+    locations = {}
     for num, place in enumerate(json_format["result"]["items"], start=1):
         if num > 5:
             break
@@ -83,10 +110,13 @@ def json_to_text(json_format):
                     from_time = place["schedule"][day]["working_hours"][0]["from"]
                     to_time = place["schedule"][day]["working_hours"][0]["to"]
                     text_format += f'\t\t\t\t{day} c {from_time} до {to_time}\n'
-    return text_format
+        locations[num] = {}
+        locations[num]["lat"] = place["point"]["lat"]
+        locations[num]["lon"] = place["point"]["lon"]
+    return text_format, locations
 
 
-def save_message(message, question_index):
+def save_message(message: Message, question_index: int) -> bool:
     chat_id = message.chat.id
 
     key = list(questions[question_index-1].keys())[0]
@@ -101,16 +131,26 @@ def save_message(message, question_index):
         else:
             resp = make_location_request(message)
             if resp is None:
-                user_responses[chat_id][key]["lat"] = None
-                user_responses[chat_id][key]["lon"] = None
+                logging.info("Bad text location")
+                return False
             else:
                 user_responses[chat_id][key]["lat"] = resp["lat"]
                 user_responses[chat_id][key]["lon"] = resp["lon"]
-
+        return True
+    elif key == "radius":
+        saving_text = convert_to_meters(message.text)
+        if saving_text:
+            user_responses[chat_id]["radius"] = saving_text
+            return True
+        logging.info("Bad text radius")
+        return False
     else:
         user_responses[chat_id][
             list(questions[question_index-1].keys())[0]  # нечитаемая фигня для получения параметра вопроса
             ] = message.text
+        return True
+    return False
+
 
 def register_handlers(bot: TeleBot):
     @bot.message_handler(commands=['opros'])

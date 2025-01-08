@@ -1,8 +1,8 @@
-
-from pprint import pprint
+import logging
 import requests as r
 import os
 from dotenv import load_dotenv
+from pprint import pprint
 
 
 def find_nearby_places(api_key, lon, lat, place_type, radius=1000):
@@ -19,18 +19,18 @@ def find_nearby_places(api_key, lon, lat, place_type, radius=1000):
     """
 
     url = url.replace("\n", "").replace("\t", "").replace(" ", "")
-    print(url)
+    logging.info("request {url}")
     response = r.get(url)
 
     if response.status_code == 200:
         results = response.json()
-        pprint(results)
-        if results["meta"]["code"] != 200:  # Хорошо что гении на 2gis отдают 200 даже на ошибки
-            # Логирование
+        # pprint(results)  # ! удалить(ручной дебаг)
+        if results["meta"]["code"] != 200:  # Хорошо что гении на 2gis отдают 200 даже на ошибки(наверное grafQl)
+            logging.error(f"Request error {results['meta']['error']}")
             return None
         return results
     else:  # ? на всякий, я в душе не чаю что у них там на уме
-        print(f"Ошибка: {response.status_code}, {response.text}")
+        logging.error(f"Ошибка: {response.status_code}, {response.text}")
         return None
 
 
