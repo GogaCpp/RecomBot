@@ -1,4 +1,5 @@
 import os
+from typing import Dict
 from dotenv import load_dotenv
 import logging
 from telebot import TeleBot
@@ -37,7 +38,7 @@ def survey_handler(message: Message, bot: TeleBot, question_index: int = 0):
         if question_index != 0:  # сохранение
             saved = save_message(message, question_index)
             if not saved:
-                bot.send_message(chat_id, "Проси, такую строчку я не обработаю, давай еще раз")
+                bot.send_message(chat_id, "Прости, такую строчку я не обработаю, давай еще раз")
                 return None
 
         if list(questions[question_index].keys())[0] == "location":
@@ -47,14 +48,17 @@ def survey_handler(message: Message, bot: TeleBot, question_index: int = 0):
     else:
         saved = save_message(message, question_index)
         if not saved:
-            bot.send_message(chat_id, "Проси, такую строчку я не обработаю, давай еще раз")
+            bot.send_message(chat_id, "Прости, такую строчку я не обработаю, давай еще раз")
             return None
-        bot.send_message(chat_id, "Ожидайте свою подборочку)")
+        bot.send_message(chat_id, "Ожидайте свою подборку мест)")
 
-        text, locations = get_nearby_places(chat_id)
+        text, locations = get_nearby_places_by_api(chat_id)
         if text is None:
-            text = "По вышим данным ничего не найденно, давайте еще раз\n/places"
+            text = "По вашим данным ничего не найденно, давайте еще раз\n/places"
+            return None
+
         logging.info(f"result for {chat_id}\n{text}")
+
         bot.send_message(chat_id, text)
 
         question_markup = get_choice_location_keyboard(len(locations))
@@ -63,21 +67,21 @@ def survey_handler(message: Message, bot: TeleBot, question_index: int = 0):
         del user_responses[chat_id]
 
 
-def send_location(message: Message, bot: TeleBot, locations):
+def send_location(message: Message, bot: TeleBot, locations: list[Dict[str, str]]):
     chat_id = message.chat.id
     message_text = int(message.text) if message.text.isdigit() else bot.send_message(chat_id, "Это даже не число..")
-    logging.debug(f"Координаты \n {locations}")
-    print(locations)
+
+    logging.debug(f"Координаты для {chat_id}:\n {locations}")
+
     if locations.get(message_text) is not None:
         lat, lon = locations[message_text]["lat"], locations[message_text]["lon"]
-        print(f"{lat},{lon}")
         bot.send_location(chat_id, latitude=lat, longitude=lon)
     else:
         bot.send_message(chat_id, "Но я ведь такого не предлагал😳...")
     bot.send_message(chat_id, "Всегда рад помочь! Удачной прогулки\nЕсли что я всегда тут /places")
 
 
-def get_nearby_places(chat_id: int):
+def get_nearby_places_by_api(chat_id: int):
     json_resp = find_nearby_places(
         api_key=os.getenv("API_KEY"),
         lat=user_responses[chat_id]["location"]["lat"],

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from pprint import pprint
 
 
-def find_nearby_places(api_key, lon, lat, place_type, radius=1000):
+def find_nearby_places(api_key: str, lon: str, lat: str, place_type: str, radius: int = 1000):
 
     url = f"""
     https://catalog.api.2gis.com/3.0/items?

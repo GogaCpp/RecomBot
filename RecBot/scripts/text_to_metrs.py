@@ -2,7 +2,7 @@ import re
 from ru_word2number import w2n
 
 
-def convert_to_meters(distance_str):
+def convert_to_meters(distance_str: str) -> int:
     distance_str = distance_str.strip().lower()
 
     km_to_meters = 1000
